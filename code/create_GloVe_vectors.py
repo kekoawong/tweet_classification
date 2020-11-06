@@ -8,7 +8,7 @@ file_name = '../data/gloVe_vectors.obj'
 
 # parse zipped file line by line
 with zipfile.ZipFile('../../glove.twitter.27B.zip') as z:
-    with z.open('../glove.twitter.27B.100d.txt') as f:
+    with z.open('glove.twitter.27B.100d.txt') as f:
         
         # iterate through each line
         for index, line in enumerate(f):
@@ -21,5 +21,5 @@ with zipfile.ZipFile('../../glove.twitter.27B.zip') as z:
 
 print('Writing to file')
 with open(file_name, 'wb') as out_file:
-    pickle.dump(file_name, out_file)
+    pickle.dump(word_vectors, out_file)
 print('Done')
