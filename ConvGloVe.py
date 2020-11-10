@@ -1,5 +1,6 @@
 #Convolutional Layers + Glove Embedding
 #https://keras.io/examples/nlp/pretrained_word_embeddings/
+#Overfitting in TF: https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
 
 import pickle
 from numpy import array
@@ -20,7 +21,7 @@ import matplotlib.pyplot as plt
 with open('./data/training_data.obj', 'rb') as training_file:
     training_data = pickle.load(training_file)
 
-tr_data_df = pd.DataFrame.from_records(training_data['tweets'], columns=['Party', 'Tweet_Text', 'Hashtags', 'Mentions', 'Retweet', 'Handle'])
+tr_data_df = pd.DataFrame.from_records(training_data['tweets'], columns=['Party', 'Tweet_Text', 'Hashtags', 'Mentions', 'Retweet', 'Handle', "nth"])
 
 
 from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
@@ -44,11 +45,23 @@ for train_index, test_index in kf.split(train):
     x_train, x_val = train[train_index], train[test_index]
     y_train, y_val = label[train_index], label[test_index]"""
 
+#Balance The Dataset
+#https://machinelearningmastery.com/random-oversampling-and-undersampling-for-imbalanced-classification/
+"""from sklearn.model_selection import train_test_split
+from imblearn.under_sampling import RandomUnderSampler
+undersample = RandomUnderSampler(sampling_strategy='majority')
+train, label = undersample.fit_resample(train, label)"""
+
 from sklearn.model_selection import train_test_split
 x_train, x_val, y_train, y_val = train_test_split(train, label, test_size=0.2)
 
 print(x_train)
 print(y_train)
+
+#Label Encoding
+"""Encoder = preprocessing.LabelEncoder()
+y_train = Encoder.fit_transform(y_train)
+y_val = Encoder.fit_transform(y_val)"""
 
 #Word Embedding
 tokenizer = Tokenizer(num_words=5000)
@@ -59,7 +72,6 @@ vocab_size = len(vect.word_index) + 1
 voc = vectorizer.get_vocabulary()
 word_index = dict(zip(voc, range(len(voc))))
 
-#embeddings_index = {}
 with open('./gloVe_vectors.obj', 'rb') as gloVe_vectors: 
     embeddings_index = pickle.load(gloVe_vectors)
 
@@ -92,22 +104,44 @@ embedding_layer = Embedding(
     trainable=False,
 )
 
-int_sequences_input = layers.Input(shape=(None,), dtype="float64")
+#Build Model with Functional API
+int_sequences_input = layers.Input(shape=(200,), dtype="float64")
 embedded_sequences = embedding_layer(int_sequences_input)
 x = layers.Conv1D(128, 5, activation="relu")(embedded_sequences)
+x = layers.SpatialDropout1D(0.5)(x)
 x = layers.MaxPooling1D(5)(x)
 x = layers.Conv1D(128, 5, activation="relu")(x)
+x = layers.SpatialDropout1D(0.5)(x)
 x = layers.MaxPooling1D(5)(x)
 x = layers.Conv1D(128, 5, activation="relu")(x)
+x = layers.SpatialDropout1D(0.5)(x)
 x = layers.GlobalMaxPooling1D()(x)
 x = layers.Dense(128, activation="relu")(x)
 x = layers.Dropout(0.5)(x)
-preds = layers.Dense(len(tr_data_df['Tweet_Text']), activation="softmax")(x)
+preds = layers.Dense(2, activation="softmax")(x)
 model = tf.keras.Model(int_sequences_input, preds)
 model.summary()
 
-#model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.compile(loss="sparse_categorical_crossentropy", optimizer="rmsprop", metrics=["acc"])
-model.fit(x_train, y_train, batch_size=128, epochs=10, validation_data=(x_val, y_val))
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=4)
+
+history = model.fit(x_train, y_train, batch_size=128, epochs=20, validation_data=(x_val, y_val), callbacks=[es_callback], verbose=1)
 
 model.save('./models/ConvGloVe.h5')
+
+from matplotlib import pyplot as plt
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('GloVe accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'val'], loc='upper left')
+plt.show()
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('GloVe loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'val'], loc='upper left')
+plt.show()
