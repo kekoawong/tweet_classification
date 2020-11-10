@@ -76,7 +76,7 @@ print("Confusion Matrix:", confusion_matrix(Y.argmax(axis=1), predictions.argmax
 print("Convolutional + GloVe")
 model = load_model('./models/ConvGloVe.h5')
 model.compile(loss='sparse_categorical_crossentropy',
-              optimizer='rmsprop',
+              optimizer='adam',
               metrics=['accuracy'])
 
 
@@ -91,7 +91,7 @@ print("Confusion Matrix:", confusion_matrix(Y.argmax(axis=1), predictions.argmax
 #Check ConvTFIDF
 print("Convolutional + TFIDF")
 model = load_model('./models/ConvTFIDF.h5')
-model.compile(loss='binary_crossentropy',
+model.compile(loss='sparse_categorical_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
