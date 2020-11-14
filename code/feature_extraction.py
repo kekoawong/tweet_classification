@@ -8,17 +8,23 @@ import numpy
 stemmer_en = SnowballStemmer("english")
 stemmer_sp = SnowballStemmer("spanish")
 
-output_file_name = '../data/sentiment_and_language.obj'
+output_file_name = '../data/feature_vectors.obj'
 
 # load files
 with open('../data/training_data.obj', 'rb') as training_file:
     training_data = pickle.load(training_file)
+with open('../data/testing_data.obj', 'rb') as training_file:
+    testing_data = pickle.load(training_file)
 with open('../data/sentiment_words_en.json') as sent_words:
     sentiment_words_en = json.load(sent_words)
 with open('../data/sentiment_words_es.json') as sent_words:
     sentiment_words_sp = json.load(sent_words)
 with open('../data/gloVe_vectors.obj', 'rb') as input_file:
     glove_words = pickle.load(input_file)
+
+# combine datasets
+test_obj = testing_data['tweets']
+training_data['tweets'].extend(test_obj)
 
 tweets = []
 for index, tweet in enumerate(training_data['tweets']):
